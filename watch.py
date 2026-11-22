@@ -37,7 +37,7 @@ def yt_rss():
 def push(title, msg, click, actions):
     req = urllib.request.Request(f"https://ntfy.sh/{TOPIC}", data=msg.encode(), method="POST", headers={
         "Title": title.encode("utf-8").decode("latin-1", "ignore") or "New post",
-        "Priority": "high", "Tags": "rotating_light", "Click": click,
+        "Priority": "urgent", "Tags": "rotating_light", "Click": click,
         "Actions": "; ".join(actions)})
     urllib.request.urlopen(req, timeout=30)
 
