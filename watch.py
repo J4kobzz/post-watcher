@@ -55,13 +55,15 @@ for platform, items in found.items():
         if H(vid) in old or first:
             continue
         url = LINKS[platform].format(id=vid)
-        pin = next((c.get("pinned_comment") for c in kit.values()
-                    if any(m.lower() in title.lower() for m in c.get("match", []))), "ask a question in the comments")
+        hit = next((c for c in kit.values()
+                    if any(m.lower() in title.lower() for m in c.get("match", []))), {})
+        pin = hit.get("pinned_comment", "ask a question in the comments")
+        cr = hit.get("campaign", CR)
         other = "TikTok" if platform == "YouTube" else "YouTube"
         msg = (f"{title[:80]}\n\nLink: {url}\n\n1) Submit this link on Content Rewards (30 min!)\n"
                f"2) Also submit your {other} post\n3) Pin comment: {pin}")
         push(f"NEW {platform} post live - submit now!", msg, url,
-             [f"view, Content Rewards, {CR}", f"view, Open post, {url}"])
+             [f"view, Content Rewards, {cr}", f"view, Open post, {url}"])
         print("pushed", platform, vid)
     seen[platform] = sorted(old | {H(v) for v, _ in items})
 
