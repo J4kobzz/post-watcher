@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Cloud watcher (GitHub Actions): new TikTok/YouTube post -> ntfy push with link, pin comment and a campaign button.
 All account details live in repository secrets, nothing identifying is stored in this repo."""
-import hashlib, json, os, re, subprocess, urllib.request
+import hashlib, json, os, re, subprocess, time, urllib.request
 from pathlib import Path
 
 CFG = json.loads(os.environ["WATCH_CONFIG"])  # {"tiktok": "...", "youtube": "...", "yt_channel": "...", "campaign": "...", "kit": {...}}
@@ -15,6 +15,8 @@ CR = CFG["campaign"]
 TOPIC = os.environ["NTFY_TOPIC"]
 H = lambda v: hashlib.sha256(v.encode()).hexdigest()[:16]  # store only hashes of post ids
 seen = json.loads(Path("seen.json").read_text() or "{}")
+live = seen.setdefault("_live", {})      # {kit_key: {"TikTok": ts, "YouTube": ts}}
+warned = seen.setdefault("_warned", [])  # kit keys already warned about
 kit = CFG.get("kit", {})
 first = not seen
 
@@ -47,6 +49,8 @@ for platform, src in SOURCES.items():
     found[platform] = items
 
 for platform, items in found.items():
+    if platform.startswith("_"):
+        continue
     if not items:
         print(f"{platform}: nothing loaded (blocked or empty), will retry")
         continue
@@ -55,8 +59,10 @@ for platform, items in found.items():
         if H(vid) in old or first:
             continue
         url = LINKS[platform].format(id=vid)
-        hit = next((c for c in kit.values()
-                    if any(m.lower() in title.lower() for m in c.get("match", []))), {})
+        key, hit = next(((kk, c) for kk, c in kit.items()
+                         if any(m.lower() in title.lower() for m in c.get("match", []))), (None, {}))
+        if key:
+            live.setdefault(key, {})[platform] = live.get(key, {}).get(platform) or int(time.time())
         pin = hit.get("pinned_comment", "ask a question in the comments")
         cr = hit.get("campaign", CR)
         other = "TikTok" if platform == "YouTube" else "YouTube"
@@ -67,4 +73,18 @@ for platform, items in found.items():
         print("pushed", platform, vid)
     seen[platform] = sorted(old | {H(v) for v, _ in items})
 
+now = int(time.time())
+for key, plats in live.items():
+    if len(plats) >= 2 or key in warned:
+        continue
+    have, ts = next(iter(plats.items()))
+    missing = "TikTok" if have == "YouTube" else "YouTube"
+    if now - ts >= 20 * 60 and found.get(missing):
+        name = kit.get(key, {}).get("youtube_title") or kit.get(key, {}).get("tiktok_caption") or key
+        name = re.sub(r"#\w+", "", name).strip()[:70]
+        push(f"WARNING: {missing} post missing!",
+             f"\"{name}\" is live on {have} but NOT on {missing}.\n\nUpload it to {missing} now (same file), then submit the link.",
+             CR, [f"view, Content Rewards, {kit.get(key, {}).get('campaign', CR)}"])
+        warned.append(key)
+        print("warned missing", missing, key)
 Path("seen.json").write_text(json.dumps(seen, indent=1))
