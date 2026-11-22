@@ -31,7 +31,7 @@ jobs:
             python watch.py || echo "check failed, retrying next loop"
             git add seen.json
             git diff --cached --quiet || (git commit -qm "update seen posts" && git pull -q --rebase && git push -q) || true
-            [ "$i" -lt "$LOOPS" ] && sleep 180
+            if [ "$i" -lt "$LOOPS" ]; then sleep 180; fi
           done
       - name: start the next run (keeps it going 24/7)
         if: always() && github.event_name != 'schedule'
