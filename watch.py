@@ -88,6 +88,23 @@ def campaign(cr_url):
         _camps[cid] = info
     return _camps[cid]
 
+_done = None
+def auto_submitted():
+    """Post ids Clip HQ (on the Mac) already submitted: its "Auto-submitted" pushes on this same ntfy topic, last 12 h.
+    The watcher then sends a quiet "already submitted" note instead of a misleading "submit now!"."""
+    global _done
+    if _done is None:
+        _done = set()
+        try:
+            r = urllib.request.urlopen(f"https://ntfy.sh/{TOPIC}/json?poll=1&since=12h", timeout=20).read().decode()
+            for line in r.splitlines():
+                m = json.loads(line)
+                if "Auto-submitted" in (m.get("title") or ""):
+                    _done.update(re.findall(r"(?:video/|shorts/)([\w-]+)", m.get("message") or ""))
+        except Exception:
+            pass
+    return _done
+
 def campaign_closed(cr_url):
     return campaign(cr_url)["closed"]
 
@@ -117,7 +134,12 @@ for platform, items in found.items():
         pin = hit.get("pinned_comment", "ask a question in the comments")
         cr = hit.get("campaign", CR)
         other = "TikTok" if platform == "YouTube" else "YouTube"
-        if key and campaign_closed(cr):
+        if vid in auto_submitted():
+            push(f"{platform} post live - already auto-submitted", f"{title[:80]}\n\nLink: {url}\n\nClip HQ already submitted "
+                 f"this to Content Rewards, nothing to do. Just pin the comment: {pin}",
+                 url, [f"view, Open post, {url}"], priority="default", tags="white_check_mark")
+            print("pushed (already submitted)", platform, vid)
+        elif key and campaign_closed(cr):
             push(f"{platform} post live - campaign paused, nothing to submit",
                  f"{title[:80]}\n\nLink: {url}\n\nThis campaign isn't taking submissions right now, so there's "
                  f"nothing to submit. Just pin the comment: {pin}",
