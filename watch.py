@@ -99,7 +99,7 @@ def auto_submitted():
             r = urllib.request.urlopen(f"https://ntfy.sh/{TOPIC}/json?poll=1&since=12h", timeout=20).read().decode()
             for line in r.splitlines():
                 m = json.loads(line)
-                if "Auto-submitted" in (m.get("title") or ""):
+                if any(w in (m.get("title") or "") for w in ("Auto-submitted", "SUBMITTED")):
                     _done.update(re.findall(r"(?:video/|shorts/)([\w-]+)", m.get("message") or ""))
         except Exception:
             pass
@@ -135,10 +135,8 @@ for platform, items in found.items():
         cr = hit.get("campaign", CR)
         other = "TikTok" if platform == "YouTube" else "YouTube"
         if vid in auto_submitted():
-            push(f"{platform} post live - already auto-submitted", f"{title[:80]}\n\nLink: {url}\n\nClip HQ already submitted "
-                 f"this to Content Rewards, nothing to do. Just pin the comment: {pin}",
-                 url, [f"view, Open post, {url}"], priority="default", tags="white_check_mark")
-            print("pushed (already submitted)", platform, vid)
+            # Clip HQ already sent the one clear "SUBMITTED" push (with the pin comment): stay quiet, no duplicate
+            print("already submitted by Clip HQ, no push", platform, vid)
         elif key and campaign_closed(cr):
             push(f"{platform} post live - campaign paused, nothing to submit",
                  f"{title[:80]}\n\nLink: {url}\n\nThis campaign isn't taking submissions right now, so there's "
