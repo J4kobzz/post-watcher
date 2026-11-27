@@ -45,6 +45,10 @@ def push(title, msg, click, actions, priority="urgent", tags="rotating_light"):
         "Actions": "; ".join(actions)})
     urllib.request.urlopen(req, timeout=30)
 
+def catchall(k):
+    """Streamer catch-all entries are exactly '<streamer>-any' (a clip slug can end in '-any' too, e.g. 'trusts-any')."""
+    return bool(re.fullmatch(r"[a-z0-9]+-any", k or ""))
+
 def match(title):
     """Most specific kit entry for a post title. A clip's own entry beats the streamer catch-all (*-any), and
     among clip entries the longest matching phrase wins, so the TikTok and YouTube posts of one clip land on
@@ -54,7 +58,7 @@ def match(title):
     for kk, c in kit.items():
         hits = [m for m in c.get("match", []) if m.lower() in t]
         if hits:
-            score = (not kk.endswith("-any"), sum(len(m) for m in hits), len(hits))
+            score = (not catchall(kk), sum(len(m) for m in hits), len(hits))
             if best is None or score > best[0]:
                 best = (score, kk, c)
     return (best[1], best[2]) if best else (None, {})
@@ -106,7 +110,7 @@ for platform, items in found.items():
             continue
         url = LINKS[platform].format(id=vid)
         key, hit = match(title)
-        if key and not key.endswith("-any"):   # catch-alls can't tell clips apart, so no pairing check for them
+        if key and not catchall(key):   # catch-alls can't tell clips apart, so no pairing check for them
             live.setdefault(key, {})[platform] = live.get(key, {}).get(platform) or int(time.time())
         elif key:
             anyhits.append([H(hit.get("campaign", CR)), platform, int(time.time())])
@@ -129,7 +133,7 @@ for platform, items in found.items():
 
 now = int(time.time())
 for key, plats in live.items():
-    if len(plats) >= 2 or key in warned or key.endswith("-any"):
+    if len(plats) >= 2 or key in warned or catchall(key):
         continue
     have, ts = next(iter(plats.items()))
     missing = "TikTok" if have == "YouTube" else "YouTube"
