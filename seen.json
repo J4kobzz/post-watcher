@@ -3,6 +3,7 @@
   "1c1692bb2921424a",
   "1f125807c31a421e",
   "51d1040aa0039264",
+  "571deb0c25be5805",
   "5d86e083a225ff2e",
   "7b3980425624c912",
   "889dc11dd809f521",
@@ -23,6 +24,7 @@
   "297013d0055f5f11",
   "2d84aca830968669",
   "367b201807de5bac",
+  "4166ffcfbe900a90",
   "48dd93717de70152",
   "5cb03adf1b5e79bd",
   "6369a0c4a0003bbf",
@@ -102,6 +104,9 @@
   },
   "dom-xbox": {
    "TikTok": 1795802513
+  },
+  "yourragegaming-rage-doesn-t-know-the-controls-and-punch": {
+   "YouTube": 1795813295
   }
  },
  "_warned": [
@@ -120,6 +125,11 @@
    "8f0a833890809b74",
    "TikTok",
    1795791740
+  ],
+  [
+   "7d7f14d14f1ab10e",
+   "TikTok",
+   1795813295
   ]
  ]
 }
